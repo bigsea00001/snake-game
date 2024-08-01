@@ -6,20 +6,25 @@ const startButton = document.getElementById('start-button');
 const restartButton = document.getElementById('restart-button');
 const gameOverScreen = document.getElementById('game-over');
 const finalScoreElement = document.getElementById('final-score');
+const difficultySelect = document.getElementById('difficulty');
+const themeSelect = document.getElementById('theme');
 
 const gridSize = 20;
 const tileCount = 20;
 canvas.width = canvas.height = gridSize * tileCount;
 
-let snake, food, dx, dy, score, highScore, gameInterval;
+let snake, food, powerUp, dx, dy, score, highScore, gameInterval, gameSpeed;
 
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', startGame);
 document.addEventListener('keydown', changeDirection);
+difficultySelect.addEventListener('change', updateDifficulty);
+themeSelect.addEventListener('change', updateTheme);
 
 function startGame() {
     snake = [{ x: 10, y: 10 }];
     food = getRandomFood();
+    powerUp = null;
     dx = 0;
     dy = 0;
     score = 0;
@@ -29,7 +34,32 @@ function startGame() {
     gameOverScreen.classList.add('hidden');
     startButton.classList.add('hidden');
     clearInterval(gameInterval);
-    gameInterval = setInterval(gameLoop, 100);
+    updateDifficulty();
+    gameInterval = setInterval(gameLoop, gameSpeed);
+}
+
+function updateDifficulty() {
+    const difficulty = difficultySelect.value;
+    switch (difficulty) {
+        case 'easy':
+            gameSpeed = 150;
+            break;
+        case 'medium':
+            gameSpeed = 100;
+            break;
+        case 'hard':
+            gameSpeed = 50;
+            break;
+    }
+    if (gameInterval) {
+        clearInterval(gameInterval);
+        gameInterval = setInterval(gameLoop, gameSpeed);
+    }
+}
+
+function updateTheme() {
+    const theme = themeSelect.value;
+    document.body.className = theme;
 }
 
 function changeDirection(event) {
@@ -78,11 +108,12 @@ function gameLoop() {
     clearCanvas();
     moveSnake();
     drawFood();
+    if (powerUp) drawPowerUp();
     drawSnake();
 }
 
 function clearCanvas() {
-    ctx.fillStyle = '#2c3e50';
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -94,6 +125,14 @@ function moveSnake() {
         score++;
         updateScore();
         food = getRandomFood();
+        if (Math.random() < 0.1) {
+            powerUp = getRandomFood();
+            setTimeout(() => powerUp = null, 5000);
+        }
+    } else if (powerUp && head.x === powerUp.x && head.y === powerUp.y) {
+        score += 5;
+        updateScore();
+        powerUp = null;
     } else {
         snake.pop();
     }
@@ -103,6 +142,13 @@ function drawFood() {
     ctx.fillStyle = '#e74c3c';
     ctx.beginPath();
     ctx.arc((food.x + 0.5) * gridSize, (food.y + 0.5) * gridSize, gridSize / 2, 0, 2 * Math.PI);
+    ctx.fill();
+}
+
+function drawPowerUp() {
+    ctx.fillStyle = '#f1c40f';
+    ctx.beginPath();
+    ctx.arc((powerUp.x + 0.5) * gridSize, (powerUp.y + 0.5) * gridSize, gridSize / 2, 0, 2 * Math.PI);
     ctx.fill();
 }
 
@@ -151,3 +197,6 @@ function updateScore() {
 function updateHighScore() {
     highScoreElement.textContent = highScore;
 }
+
+// Initialize theme
+updateTheme();
